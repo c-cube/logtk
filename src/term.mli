@@ -33,14 +33,15 @@ rewrite system) for the typing rules.
 
 type t = private {
   term : term_cell;             (** the term itself *)
-  ty : Type.t option lazy;      (** type *)
+  mutable ty : t option;        (** type *)
   mutable tsize : int;          (** size (number of subterms) *)
   mutable flags : int;          (** boolean flags about the term *)
-  mutable tag : int;            (** hashconsing tag *)
+  mutable id : int;             (** hashconsing tag *)
 }
 (** content of the term *)
 and term_cell = private
   | TType                       (** the "type" of types *)
+  | Kind                        (** the "type" of TType *)
   | Var of int                  (** variable *)
   | BoundVar of int             (** bound variable (De Bruijn index) *)
   | Const of Symbol.t           (** Constant *)
@@ -49,6 +50,11 @@ and term_cell = private
   | Pi of t * t                 (** quantification on types *)
 
 type term = t
+
+(** {2 Exceptions} *)
+
+exception TypeError of string
+  (** Type error, raised when types do not match *)
 
 (** {2 Basics} *)
 
@@ -82,69 +88,76 @@ Term constructors perform hashconsing and always reduce terms to
 their normal form.
 *)
 
-val tTtype : t
+val kind : t
+  (** type of {!tType} *)
+
+val tType : t
   (** Type *)
 
 val var : ty:t -> int -> t
   (** Create a variable. The index must be >= 0 *)
 
-val bound_var : int -> t
+val bound_var : ty:t -> int -> t
   (** De Bruijn index, must be >= 0. No type is needed
       since the type appears at binder position. *)
 
-exception DependentType
-
 val pi : varty:t -> t -> t
-  (** [pi ~varty t] creates the pi type with type [pi x:varty. t]
-      @raise DependentType if the resulting type is dependent *)
-
-exception SystemF
+  (** [pi ~varty t] creates the pi type with type [env |- pi DB0:varty. t]
+      @raise TypeError if the type is ill-typed under [env, DB0:varty] *)
 
 val lambda : varty:t -> t -> t
-  (** [lambda ~varty t'] creates the lambda function with
-      type [varty -> t'.ty]
-      @raise SystemF if the result is a type *)
+  (** [lambda ~env ~varty t'] creates the lambda function with
+      type [env |- varty -> t'.ty].
+      @raise TypeError if the return term is ill-typed under [env, DB0:varty] *)
 
 val arrow : t -> t -> t
   (** [arrow] is a restriction of [pi] for arrow types *)
 
-val const : ty:Type.t -> Symbol.t -> t
+val const : ty:t -> Symbol.t -> t
   (** Constant, with a given type *)
-
-exception TypeError of string
-  (** Type error, raised when types do not match *)
 
 val at : t -> t list -> t
   (** Apply a term to other terms. Type can be deduced from arguments.
       @raise Failure if types do not match. *)
 
-(** {2 Variable environment}
+val infer_ty : t -> t
+  (** Compute the type of the given term. 
+      @raise Invalid_argument if the term is {!kind} or if it's a
+        bound variable.
+      @raise TypeError if the term is ill-typed or if some De Bruijn
+        index is not bound in [env]. *)
 
-Environment for De Bruijn variables, used for beta reduction
-*)
+(** {2 Easy constructors} *)
 
-module Env : sig
-  type t
-  
-  val empty : t
-    (** Empty env *)
+val arrow_list : t list -> t -> t
+  (** [arrow_list args ret] builds the function type [args -> ret] *)
 
-  val depth : t -> int
-    (** Depth of the environment (number of binders met) *)
+val lambda_list : t list -> t -> t
+  (** [lambda_list vars t] replaces each free variable of [vars] by
+      a De Bruijn index in [t], and lambda-abstract over them.
+      The term [t] must be well-typed. *)
 
-  val push : t -> term -> t
-    (** Enter a scope, binding the variable to the given term *)
+val pi_list : t list -> t -> t
+  (** Same as {!lambda_list} but builds a pi term. *)
 
-  val push_none : t -> t
-    (** Enter a scope without binding the variable *)
+val i : t
+val o : t
+val int : t
+val rat : t
+val real : t
+val (==>) : t list -> t -> t
+val (-->) : t -> t -> t
 
-  val pop : t -> t
-    (** Exit the scope.
-        @raise Invalid_argument if the scope is empty *)
+val ty_const : string -> t
+val term_const : ?ty:t -> string -> t
 
-  val find : t -> int -> term option
-    (** Find the value the [n]-th variable is bound to *)
-end
+(** {2 Beta-reduction} *)
+
+val beta_hnf : t -> t
+  (** reduce [t] into weak head normal form (no redex at root) *)
+
+val beta_nf : t -> t
+  (** reduce [t] to its beta-normal form, recursively. *)
 
 (** {2 Properties} *)
 
@@ -163,14 +176,17 @@ val is_type : t -> bool   (** is the term a type (ie : tType) *)
 val print_all_types : bool ref
 
 val pp_debug : Buffer.t -> t -> unit
+val to_string_debug : t -> string
+val fmt : Format.formatter -> t -> unit
+
+(* TODO
 val pp_tstp : Buffer.t -> t -> unit
 
 val pp : Buffer.t -> t -> unit
 val set_default_pp : (Buffer.t -> t -> unit) -> unit
-val to_string : t -> string
-val fmt : Format.formatter -> t -> unit
 
 val bij : t Bij.t
+*)
 
 (** {2 Positions} *)
 
