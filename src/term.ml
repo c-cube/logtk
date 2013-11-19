@@ -160,6 +160,8 @@ let rec pp_depth depth buf t =
       | _ -> ()
     end
   and pp_surrounded depth buf t = match t.term with
+    | Lambda _
+    | Pi _
     | At _ ->
       Buffer.add_char buf '('; pp_rec depth buf t; Buffer.add_char buf ')'
     | _ -> pp_rec depth buf t
@@ -437,10 +439,16 @@ let rec beta_nf t = match t.term with
 let rec _replace ~depth ~sub ~ty t = match t.term with
   | _ when eq t sub -> bound_var ~ty depth  (* replace by bound variable *)
   | TType
-  | Kind
-  | Var _
-  | BoundVar _
-  | Const _ -> t
+  | Kind -> t
+  | Var i ->
+    let ty = _replace ~depth ~sub ~ty (_get_ty t) in
+    var ~ty i
+  | BoundVar i ->
+    let ty = _replace ~depth ~sub ~ty (_get_ty t) in
+    bound_var ~ty i
+  | Const s ->
+    let ty = _replace ~depth ~sub ~ty (_get_ty t) in
+    const ~ty s
   | At (head, l) ->
     __at (_replace ~depth ~sub ~ty head) (_replace_list ~depth ~sub ~ty l)
   | Lambda (varty, t') ->
