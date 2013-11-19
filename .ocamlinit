@@ -27,9 +27,11 @@
 #install_printer Logtk.Transform.fmt;;
 #install_printer Logtk.Trace_tstp.fmt;;
 #install_printer Logtk.TypeUnif.fmt_error;;
+#install_printer Logtk.Term.fmt;;
 open Logtk.Sequence.Infix;;
 open Logtk.Type;;
-module T = Logtk.FOTerm;;
+module T = Logtk.Term;;
+module FOT = Logtk.Term;;
 module F = Logtk.FOFormula;;
 module HOT = Logtk.HOTerm;;
 open Logtk;;
