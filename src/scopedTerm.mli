@@ -45,7 +45,7 @@ type view = private
   | BVar of int
   | Bind of symbol * t
   | Const of symbol
-  | App of t * t list
+  | App of t * t
 
 val view : t -> view
   (** View on the term's head form *)
@@ -54,7 +54,6 @@ module Kind : sig
   (** "kind" of a term, i.e. what is its meaning, in which context is it
       used *)
   type t =
-    | Const
     | Type
     | FOTerm
     | HOTerm
@@ -73,7 +72,7 @@ include Interfaces.ORD with type t := t
 (** {3 Constructors} *)
 
 val const : kind:Kind.t -> ty:t -> symbol -> t
-val app : kind:Kind.t -> ty:t -> t -> t list -> t
+val app : kind:Kind.t -> ty:t -> t -> t -> t
 val bind : kind:Kind.t -> ty:t -> symbol -> t -> t
 val var : kind:Kind.t -> ty:t -> int -> t
 val bvar : kind:Kind.t -> ty:t -> int -> t
