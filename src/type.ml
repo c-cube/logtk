@@ -41,8 +41,9 @@ let kind = T.Kind.Type
 type view =
   | Var of int              (** Type variable *)
   | BVar of int             (** Bound variable (De Bruijn index) *)
-  | App of symbol * t list  (** parametrized type *)
-  | Fun of t * t list       (** Function type *)
+  | Const of symbol         (** constant *)
+  | App of t * t            (** parametrized type *)
+  | Fun of t * t            (** Function type *)
   | Forall of t             (** explicit quantification using De Bruijn index *)
 
 let view t = match T.kind t with
@@ -51,12 +52,16 @@ let view t = match T.kind t with
     | T.Var i -> Var i
     | T.BVar i -> BVar i
     | T.Bind (Symbol.Conn Symbol.ForallTy, t') -> Forall t'
-    | T.Const s -> App (s, [])
-    | T.App (head, ((t'::l') as l)) ->
-      begin match T.view head with
-      | T.Const (Symbol.Conn Symbol.Arrow) -> Fun (t', l')
-      | T.Const s -> App (s, l)
-      | _ -> failwith "Type.view"
+    | T.Const s -> Const s
+    | T.App (l, r) ->
+        begin match T.view l with
+        | T.App (l1, l2) ->
+            begin match T.view l1 with
+            | T.Const (Symbol.Conn Symbol.Arrow) ->
+                Fun (l2, r)
+            | _ -> App (l, r)
+            end
+        | _ -> App (l, r)
       end
     | _ -> failwith "Type.view"
     end
@@ -82,19 +87,10 @@ let app s l = T.app ~kind ~ty:tType (T.const ~kind ~ty:tType s) l
 
 let const s = T.const ~kind ~ty:tType s
 
-let rec mk_fun ret args =
-  match args with
-  | [] -> ret
-  | _::_ ->
-    match view ret with
-    | Fun (ret', args') ->
-      (* invariant: flatten function types. Symmetric w.r.t the {!HOTerm.At}
-          constructor invariant. [args] must be applied before [args']
-          need to be supplied.
-          Example: [(a <- b) <- c] requires [c] first *)
-      mk_fun ret' (args @ args')
-    | _ ->
-      T.app ~kind ~ty:tType (T.const ~kind ~ty:tType Symbol.Base.arrow) (ret :: args)
+let ___arrow = const Symbol.Base.arrow
+
+let mk_fun a ret =
+  T.app ~kind ~ty:tType (T.app ~kind ~ty:tType ___arrow a) ret
 
 let forall vars ty =
   T.bind_vars ~kind ~ty:tType Symbol.Base.forall_ty vars ty
@@ -102,9 +98,7 @@ let forall vars ty =
 let __forall ty =
   T.bind ~kind ~ty:tType Symbol.Base.forall_ty ty
 
-let (<==) = mk_fun
-let (<=.) ret a = mk_fun ret [a]
-let (@@) = app
+let (@->) = mk_fun
 
 (* downcast *)
 let of_term ty = match T.kind ty with
@@ -251,8 +245,8 @@ let apply ty args =
   apply ty args
 
 module TPTP = struct
-  let arrow = Symbol.of_string ">"
-  let forall_ty = Symbol.of_string "!>"
+  let arrow = Symbol.Conn Symbol.Arrow
+  let forall_ty = Symbol.Conn Symbol.ForallTy
   let tType = T.tType
 
   let i = const Symbol.TPTP.i

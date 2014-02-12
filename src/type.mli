@@ -57,8 +57,9 @@ type ty = t
 type view = private
   | Var of int              (** Type variable *)
   | BVar of int             (** Bound variable (De Bruijn index) *)
-  | App of symbol * t list  (** parametrized type *)
-  | Fun of t * t list       (** Function type *)
+  | Const of symbol         (** constant *)
+  | App of t * t            (** parametrized type *)
+  | Fun of t * t            (** Function type: Fun(l,r) is l -> r *)
   | Forall of t             (** explicit quantification using De Bruijn index *)
 
 val view : t -> view
@@ -82,15 +83,15 @@ val tType : t
 val var : int -> t
   (** Build a type variable. The integer must be >= 0 *)
 
+val const : symbol -> t
+  (** Constant type *)
+
 val app : symbol -> t list -> t
   (** Parametrized type *)
 
-val const : symbol -> t
-  (** Constant sort *)
-
-val mk_fun : t -> t list -> t
+val mk_fun : t -> t -> t
   (** Function type. The first argument is the return type.
-      see {!(<==)}. *)
+      see {!(@->)}. *)
 
 val forall : t list -> t -> t
   (** [forall vars ty] quantifies [ty] over [vars].
@@ -98,17 +99,9 @@ val forall : t list -> t -> t
       @raise Invalid_argument if some element of [vars] is not a variable *)
 
 val __forall : t -> t
-  (** not documented. *)
 
-val (@@) : symbol -> t list -> t
-  (** [s @@ args] applies the sort [s] to arguments [args]. *)
-
-val (<==) : t -> t list -> t
-  (** General function type. [x <== l] is the same as [x] if [l]
-      is empty. Invariant: the return type is never a function type. *)
-
-val (<=.) : t -> t -> t
-  (** Unary function type. [x <=. y] is the same as [x <== [y]]. *)
+val (@->) : t -> t -> t
+  (** Unary function type. [x @-> y] is the function from [x] to [y]*)
 
 val of_term : ScopedTerm.t -> t option
   (** Conversion from a term, if structure matches *)
