@@ -60,6 +60,7 @@ Library "logtk"
                     LogtkCongruence, LogtkFastFingerprint, LogtkFeatureVector,
                     LogtkRewriting, LogtkFormulaShape, LogtkTransform,
                     LogtkLambda, LogtkSourced, LogtkTypedPrologTerm,
+                    LogtkEvaluator, LogtkEvaluator_intf,
                     lib/LogtkHashcons, lib/LogtkCache, lib/LogtkParseLocation,
                     lib/LogtkMultiset, lib/LogtkPartialOrder,
                     lib/LogtkPartialOrder_intf, lib/LogtkLazyList,

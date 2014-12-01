@@ -33,50 +33,23 @@ handy for arithmetic, where there are many distinct interpreted symbols.
 
 (** {2 Signature of evaluator for some terms} *)
 
-module type S = sig
-  type term
+module type S = LogtkEvaluator_intf.S
 
-  type eval_fun = tyargs:Type.t list -> Symbol.t -> term list -> term option
-    (** An  evaluation function takes a symbol application, and a list of
-        arguments, and can decide to return a new term based on that.
-        If it returns None, it means that the term is already evaluated. *)
-
-  type t
-    (** An evaluator. It maps symbols to evaluators *)
-
-  val create : unit -> t
-    (** New evaluator *)
-
-  val copy : t -> t
-    (** Copy the evaluator *)
-
-  val register : t -> Symbol.t -> eval_fun -> unit
-    (** Add an evaluation function to the evaluator. *)
-
-  val register_list : t -> (Symbol.t * eval_fun) list -> unit
-
-  val interpreted : t -> Symbol.t -> bool
-    (** Is there a registered evaluation function for this symbol? *)
-
-  val eval_head : t -> term -> term
-    (** Evaluate the term's root, but not subterms *)
-
-  val eval : t -> term -> term
-    (** Recursively evaluate the term *)
-end
+type form = LogtkFormula.FO.t
+type sym = LogtkSymbol.t
 
 (** {2 Evaluators for first-order typed terms} *)
 
 module FO : sig
-  include S with type term = FOTerm.t
+  include S with type term = LogtkFOTerm.t
 
-  val eval_form : t -> FOFormula.t -> FOFormula.t
+  val eval_form : t -> form -> form
     (** Evaluate a formula *)
 
-  val app : ?tyargs:Type.t list -> t -> Symbol.t -> term list -> term
+  val app : ?tyargs:LogtkType.t list -> t -> term -> term list -> term
     (** Function application, but evaluating if needed *)
 
-  val arith : (Symbol.t * eval_fun) list
+  val arith : (sym * eval_fun) list
     (** List of evaluators for arithmetic *)
 
   val with_arith : t -> unit
