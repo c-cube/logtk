@@ -130,6 +130,9 @@ module Nary : NARY with type term = LogtkScopedTerm.t
 module Unary : UNARY with type term = LogtkScopedTerm.t
 (** To be used only on terms without {!LogtkScopedTerm.Multiset} constructor *)
 
+module MakeUnary(X : LogtkUnif_intf.UNARY_TERM) : UNARY with X.Term.t
+(** Functor *)
+
 (** {2 Specializations} *)
 
 module Ty : UNARY with type term = LogtkType.t

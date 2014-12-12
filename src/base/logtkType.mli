@@ -123,7 +123,7 @@ val (<=.) : t -> t -> t
   (** Unary function type. [x <=. y] is the same as [x <== [y]]. *)
 
 val multiset : t -> t
-  (** LogtkType of multiset *)
+  (** Type of multiset *)
 
 val of_term : LogtkScopedTerm.t -> t option
   (** Conversion from a term, if structure matches *)
@@ -204,6 +204,8 @@ val apply_list : t -> t list -> t
 include LogtkInterfaces.PRINT_DE_BRUIJN with type term := t and type t := t
 include LogtkInterfaces.PRINT with type t := t
 val pp_surrounded : Buffer.t -> t -> unit
+
+(* TODO: visitor for extensible printing with open recursion *)
 
 (*
 include LogtkInterfaces.SERIALIZABLE with type t := t
