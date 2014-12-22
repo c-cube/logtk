@@ -59,6 +59,7 @@ module type S = sig
     | Forall of type_ * t  (** Quantified formula, with De Bruijn index *)
     | Exists of type_ * t
     | ForallTy of t  (** quantification on type variable *)
+    | ExistsTy of t
 
   val view : t -> view
     (** View of the formula *)
@@ -103,10 +104,12 @@ module type S = sig
     val forall : term list -> t -> t
     val exists : term list -> t -> t
     val forall_ty : type_ list -> t -> t
+    val exists_ty : type_ list -> t -> t
 
     val __mk_forall : varty:type_ -> t -> t
     val __mk_exists : varty:type_ -> t -> t
     val __mk_forall_ty : t -> t
+    val __mk_exists_ty : t -> t
   end
 
   (** {2 Sequence} *)

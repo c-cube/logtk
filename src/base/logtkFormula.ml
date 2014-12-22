@@ -57,6 +57,7 @@ module type S = sig
     | Forall of LogtkType.t * t  (** Quantified formula, with De Bruijn index *)
     | Exists of LogtkType.t * t
     | ForallTy of t  (** quantification on type variable *)
+    | ExistsTy of t
 
   val view : t -> view
     (** View of the formula *)
@@ -101,10 +102,12 @@ module type S = sig
     val forall : term list -> t -> t
     val exists : term list -> t -> t
     val forall_ty : LogtkType.t list -> t -> t
+    val exists_ty : type_ list -> t -> t
 
     val __mk_forall : varty:LogtkType.t -> t -> t
     val __mk_exists : varty:LogtkType.t -> t -> t
     val __mk_forall_ty : t -> t
+    val __mk_exists_ty : t -> t
   end
 
   (** {2 Sequence} *)
@@ -275,6 +278,7 @@ module Make(MyT : TERM) = struct
     | Forall of LogtkType.t * t  (** Quantified formula, with De Bruijn index *)
     | Exists of LogtkType.t * t
     | ForallTy of t  (** quantification on type variable *)
+    | ExistsTy of t
 
   let view t = match T.kind t with
     | kind when kind = MyT.kind ->
@@ -297,12 +301,14 @@ module Make(MyT : TERM) = struct
           | Sym.Neq -> Neq (MyT.of_term_exn a, MyT.of_term_exn b)
           | _ -> assert false
           end
+      | T.Bind (Sym.Conn Sym.Forall, varty, f') when T.eq varty T.tType->
+          ForallTy f'
       | T.Bind (Sym.Conn Sym.Forall, varty, f') ->
           Forall (LogtkType.of_term_exn varty, f')
+      | T.Bind (Sym.Conn Sym.Exists, varty, f') when T.eq varty T.tType ->
+          ExistsTy f'
       | T.Bind (Sym.Conn Sym.Exists, varty, f') ->
           Exists (LogtkType.of_term_exn varty, f')
-      | T.Bind (Sym.Conn Sym.ForallTy, ty, f') when T.eq ty T.tType->
-          ForallTy f'
       | _ -> assert false
       end
     | _ -> failwith "wrong kind for formula"
@@ -401,7 +407,10 @@ module Make(MyT : TERM) = struct
       T.bind ~kind ~ty ~varty:(varty:>T.t) Sym.Base.exists f
 
     let __mk_forall_ty f =
-      T.bind ~kind ~ty ~varty:T.tType Sym.Base.forall_ty f
+      T.bind ~kind ~ty ~varty:T.tType Sym.Base.forall f
+
+    let __mk_exists_ty f =
+      T.bind ~kind ~ty ~varty:T.tType Sym.Base.exists f
 
     let forall vars f =
       List.fold_right
@@ -423,6 +432,13 @@ module Make(MyT : TERM) = struct
           let f' = T.DB.replace (T.DB.shift 1 f) ~sub:(v:>T.t) in
           __mk_forall_ty f')
         vars f
+
+    let exists_ty vars f =
+      List.fold_right
+        (fun (v:LogtkType.t) f ->
+          let f' = T.DB.replace (T.DB.shift 1 f) ~sub:(v:>T.t) in
+          __mk_exists_ty f')
+        vars f
   end
 
   (** {2 Combinators} *)
@@ -442,6 +458,7 @@ module Make(MyT : TERM) = struct
     | Forall (varty,f') -> Base.__mk_forall ~varty (map_leaf f f')
     | Exists (varty,f') -> Base.__mk_exists ~varty (map_leaf f f')
     | ForallTy f' -> Base.__mk_forall_ty (map_leaf f f')
+    | ExistsTy f' -> Base.__mk_exists_ty (map_leaf f f')
 
   let map (f:term->term) form =
     map_leaf
@@ -468,7 +485,8 @@ module Make(MyT : TERM) = struct
     | Neq _ -> f acc form
     | Forall (_,f')
     | Exists (_,f')
-    | ForallTy f' -> fold_atom f acc f'
+    | ForallTy f'
+    | ExistsTy f' -> fold_atom f acc f'
 
   let fold f acc form =
     fold_atom
@@ -498,6 +516,7 @@ module Make(MyT : TERM) = struct
     | Forall (varty,f') -> Base.__mk_forall ~varty (func f')
     | Exists (varty,f') -> Base.__mk_exists ~varty (func f')
     | ForallTy f' -> Base.__mk_forall_ty (func f')
+    | ExistsTy f' -> Base.__mk_exists_ty (func f')
 
   let rec map_depth ?(depth=0) f form = match view form with
     | And l -> Base.and_ (List.map (map_depth ~depth f) l)
@@ -514,6 +533,8 @@ module Make(MyT : TERM) = struct
     | Forall (varty,f') -> Base.__mk_forall ~varty (map_depth ~depth:(depth+1) f f')
     | Exists (varty,f') -> Base.__mk_exists ~varty (map_depth ~depth:(depth+1) f f')
     | ForallTy f' -> Base.__mk_forall_ty (map_depth ~depth:(depth+1) f f')
+    | ExistsTy f' -> Base.__mk_exists_ty (map_depth ~depth:(depth+1) f f')
+
 
   let rec map_leaf_depth ?(depth=0) f form = match view form with
     | And l -> Base.and_ (List.map (map_leaf_depth ~depth f) l)
@@ -530,6 +551,7 @@ module Make(MyT : TERM) = struct
     | Forall (varty,f') -> Base.__mk_forall ~varty (map_leaf_depth ~depth:(depth+1) f f')
     | Exists (varty,f') -> Base.__mk_exists ~varty (map_leaf_depth ~depth:(depth+1) f f')
     | ForallTy f' -> Base.__mk_forall_ty (map_leaf_depth ~depth:(depth+1) f f')
+    | ExistsTy f' -> Base.__mk_exists_ty (map_leaf_depth ~depth:(depth+1) f f')
 
   let fold_depth ?(depth=0) f acc form =
     let rec recurse f acc depth form = match view form with
@@ -552,7 +574,8 @@ module Make(MyT : TERM) = struct
       acc
     | Forall (_, f')
     | Exists (_, f')
-    | ForallTy f' ->
+    | ForallTy f'
+    | ExistsTy f' ->
       recurse f acc (depth+1) f'
     in
     recurse f acc depth form
@@ -564,7 +587,8 @@ module Make(MyT : TERM) = struct
     | Not f'
     | Forall (_,f')
     | Exists (_,f')
-    | ForallTy f' -> count (n+1) f'
+    | ForallTy f'
+    | ExistsTy f' -> count (n+1) f'
     | Neq (t1, t2)
     | Eq (t1, t2) -> n + MyT.size t1 + MyT.size t2
     | Atom p -> n + MyT.size p
@@ -604,7 +628,8 @@ module Make(MyT : TERM) = struct
     | Not _
     | Forall _
     | Exists _
-    | ForallTy _ -> false
+    | ForallTy _
+    | ExistsTy _ -> false
     | True
     | False
     | Atom _
@@ -689,6 +714,7 @@ module Make(MyT : TERM) = struct
     | Forall (varty,f') -> Base.__mk_forall ~varty (flatten f')
     | Exists (varty,f') -> Base.__mk_exists ~varty (flatten f')
     | ForallTy f' -> Base.__mk_forall_ty (flatten f')
+    | ExistsTy f' -> Base.__mk_exists_ty (flatten f')
     | True
     | False
     | Atom _
@@ -719,6 +745,7 @@ module Make(MyT : TERM) = struct
       | Forall (varty,f') -> Base.__mk_forall ~varty (simplify ~depth:(depth+1) f')
       | Exists (varty,f') -> Base.__mk_exists ~varty (simplify ~depth:(depth+1) f')
       | ForallTy f' -> Base.__mk_forall_ty (simplify ~depth:(depth+1) f')
+      | ExistsTy f' -> Base.__mk_exists_ty (simplify ~depth:(depth+1) f')
       | Neq (a, b) when MyT.eq a b -> Base.false_
       | Eq (a,b) when MyT.eq a b -> Base.true_
       | Neq _
@@ -781,7 +808,8 @@ module Make(MyT : TERM) = struct
     | Not _ -> false
     | Exists (_,f')
     | Forall (_,f')
-    | ForallTy f' -> is_trivial f'
+    | ForallTy f'
+    | ExistsTy f' -> is_trivial f'
 
   let ac_normal_form f =
     let rec recurse f = match view f with
@@ -815,6 +843,7 @@ module Make(MyT : TERM) = struct
     | Forall (varty,f') -> Base.__mk_forall ~varty (recurse f')
     | Exists (varty,f') -> Base.__mk_exists ~varty (recurse f')
     | ForallTy f' -> Base.__mk_forall_ty (recurse f')
+    | ExistsTy f' -> Base.__mk_exists_ty (recurse f')
     in
     recurse (flatten f)
 
@@ -853,8 +882,12 @@ module Make(MyT : TERM) = struct
             (LogtkType.Conv.to_prolog ~depth tyvar)]
         (to_prolog (depth+1) f')
     | ForallTy f' ->
-      PT.TPTP.forall_ty
-        [PT.var (LogtkUtil.sprintf "A%d" depth)]
+      PT.TPTP.forall
+        [PT.var ~ty:PT.TPTP.tType (LogtkUtil.sprintf "A%d" depth)]
+        (to_prolog (depth+1) f')
+    | ExistsTy f' ->
+      PT.TPTP.exists
+        [PT.var ~ty:PT.TPTP.tType (LogtkUtil.sprintf "A%d" depth)]
         (to_prolog (depth+1) f')
     in to_prolog depth f
 
@@ -887,17 +920,24 @@ module Make(MyT : TERM) = struct
     | Forall (ty,f') ->
       let v = !depth in
       incr depth;
-      Printf.bprintf buf "∀ Y%d: %a. %a" v LogtkType.pp ty pp_inner f';
+      Printf.bprintf buf "∀ Y%d: %a. %a" v
+        (LogtkType.pp_depth (!depth-1)) ty pp_inner f';
       decr depth
     | ForallTy f' ->
       let v = !depth in
       incr depth;
-      Printf.bprintf buf "∀ A%d. %a" v pp_inner f';
+      Printf.bprintf buf "∀ T%d:type. %a" v pp_inner f';
       decr depth
     | Exists (ty, f') ->
       let v = !depth in
       incr depth;
-      Printf.bprintf buf "∃ Y%d: %a. %a" v LogtkType.pp ty pp_inner f';
+      Printf.bprintf buf "∃ Y%d: %a. %a" v
+        (LogtkType.pp_depth (!depth-1)) ty pp_inner f';
+      decr depth
+    | ExistsTy f' ->
+      let v = !depth in
+      incr depth;
+      Printf.bprintf buf "∃ T%d:type. %a" v pp_inner f';
       decr depth
     | And l -> LogtkUtil.pp_list ~sep:" ∧ " pp_inner buf l
     | Or l -> LogtkUtil.pp_list ~sep:" ∨ " pp_inner buf l
@@ -947,19 +987,26 @@ module Make(MyT : TERM) = struct
         incr depth;
         if LogtkType.eq ty LogtkType.TPTP.i
           then Printf.bprintf buf "![Y%d]: %a" v pp_inner f'
-          else Printf.bprintf buf "![Y%d:%a]: %a" v LogtkType.pp ty pp_inner f';
+          else Printf.bprintf buf "![Y%d:%a]: %a"
+            v (LogtkType.pp_depth (!depth-1)) ty pp_inner f';
         decr depth
       | ForallTy f' ->
         let v = !depth in
         incr depth;
-        Printf.bprintf buf "![A%d:$tType]: %a" v pp_inner f';
+        Printf.bprintf buf "![T%d:$tType]: %a" v pp_inner f';
         decr depth
       | Exists (ty, f') ->
         let v = !depth in
         incr depth;
         if LogtkType.eq ty LogtkType.TPTP.i
           then Printf.bprintf buf "?[Y%d]: %a" v pp_inner f'
-          else Printf.bprintf buf "?[Y%d:%a]: %a" v LogtkType.pp ty pp_inner f';
+          else Printf.bprintf buf "?[Y%d:%a]: %a" v
+            (LogtkType.pp_depth (!depth-1)) ty pp_inner f';
+        decr depth
+      | ExistsTy f' ->
+        let v = !depth in
+        incr depth;
+        Printf.bprintf buf "?[T%d:$tType]: %a" v pp_inner f';
         decr depth
       | And l -> LogtkUtil.pp_list ~sep:" & " pp_inner buf l
       | Or l -> LogtkUtil.pp_list ~sep:" | " pp_inner buf l
@@ -1009,7 +1056,8 @@ module FO = struct
     | Not f' -> T.TPTP.mk_not (to_hoterm f')
     | Forall (ty,f') -> T.TPTP.__mk_forall ~varty:ty (to_hoterm f')
     | Exists (ty,f') -> T.TPTP.__mk_exists ~varty:ty (to_hoterm f')
-    | ForallTy f' -> failwith "LogtkHOTerm doesn't support dependent types"
+    | ForallTy f'
+    | ExistsTy f' -> failwith "LogtkHOTerm doesn't support dependent types"
     | Atom p -> T.curry p
 
   let of_hoterm t =

@@ -332,7 +332,25 @@ module TPTP = struct
   let imply ?loc a b = syntactic ?loc Sym.Base.imply [a;b]
   let eq ?loc ?(ty=wildcard) a b = syntactic ?loc Sym.Base.eq [ty;a;b]
   let neq ?loc ?(ty=wildcard) a b = syntactic ?loc Sym.Base.neq [ty;a;b]
-  let forall ?loc vars f = bind ?loc Sym.Base.forall vars f
+
+  (* partition vars into a set of v:$tType and v:some_other_type *)
+  let rec partition_vars_ty vars ty_vars l = match l with
+    | {term=Column ({term=Var _}, {term=Const (Sym.Conn Sym.TType)})} as t :: tail ->
+        partition_vars_ty vars (t::ty_vars) tail
+    | t :: tail ->
+        partition_vars_ty (t::vars) ty_vars tail
+    | [] -> vars, ty_vars
+
+  (* subtlety: ![A:$tType] shall become a forall_ty *)
+  let forall ?loc vars f =
+    let vars, ty_vars = partition_vars_ty [] [] vars in
+    match ty_vars with
+    | [] -> bind ?loc Sym.Base.forall vars f
+    | _::_ ->
+        (* two levels of quantification *)
+        let f' = bind ?loc Sym.Base.forall vars f in
+        bind ?loc Sym.Base.forall_ty ty_vars f'
+
   let exists ?loc vars f = bind ?loc Sym.Base.exists vars f
   let lambda ?loc vars f = bind ?loc Sym.Base.lambda vars f
 

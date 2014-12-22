@@ -57,7 +57,8 @@ let rec is_cnf f = match F.view f with
   | F.Imply _
   | F.Forall _
   | F.Exists _
-  | F.ForallTy _ -> false
+  | F.ForallTy _
+  | F.ExistsTy _ -> false
 
 and is_lit f = match F.view f with
   | F.Not f' -> F.is_atomic f'
@@ -73,7 +74,8 @@ and is_lit f = match F.view f with
   | F.Imply _
   | F.Forall _
   | F.Exists _
-  | F.ForallTy _ -> false
+  | F.ForallTy _
+  | F.ExistsTy _ -> false
 
 let is_clause l = List.for_all is_lit l
 
@@ -135,6 +137,8 @@ let miniscope ?(distribute_exists=false) f =
     end
   | F.ForallTy f' ->
     F.Base.__mk_forall_ty (miniscope f')  (* do not bother *)
+  | F.ExistsTy f' ->
+    F.Base.__mk_exists_ty (miniscope f')
   | F.And l -> F.Base.and_ (List.map miniscope l)
   | F.Or l -> F.Base.or_ (List.map miniscope l)
   | F.Imply (f1, f2) -> F.Base.imply (miniscope f1) (miniscope f2)
@@ -180,7 +184,9 @@ let rec nnf f =
       | F.Exists (varty, f'') ->
         F.Base.__mk_forall ~varty (nnf (F.Base.not_ f''))
       | F.ForallTy f' ->
-        failwith "quantification on type variables in contravariant position"
+        F.Base.__mk_exists_ty (nnf (F.Base.not_ f'))
+      | F.ExistsTy f' ->
+        F.Base.__mk_forall_ty (nnf (F.Base.not_ f'))
       | F.True -> F.Base.false_
       | F.False -> F.Base.true_
       | F.Atom _ -> f
@@ -200,6 +206,7 @@ let rec nnf f =
   | F.Forall (varty,f') -> F.Base.__mk_forall ~varty (nnf f')
   | F.Exists (varty,f') -> F.Base.__mk_exists ~varty (nnf f')
   | F.ForallTy f' -> F.Base.__mk_forall_ty (nnf f')
+  | F.ExistsTy f' -> F.Base.__mk_exists_ty (nnf f')
 
 (* evaluate [f] in the given [env], and then unshift remaining free DB vars *)
 let __eval_and_unshift env f =
@@ -226,6 +233,11 @@ let skolemize ~ctx f =
   | F.Exists (ty,f') ->
     (* replace [v] by a fresh skolem term *)
     let new_f' = LogtkSkolem.skolem_form ~ctx ~ty f' in
+    skolemize new_f'
+  | F.ExistsTy f' ->
+    (* fresh type (we assume prenex position, so no arguments) *)
+    let ty = LogtkType.const (LogtkSkolem.fresh_ty_const ~ctx ()) in
+    let new_f' = LogtkSkolem.instantiate_ty f' ty in
     skolemize new_f'
   | F.Forall (ty,f') ->
     (* remove quantifier, replace by fresh variable *)
@@ -326,7 +338,8 @@ let estimate_num_clauses ~cache ~pos f =
             E.((num false a */ num true b) +/ (num true a */ num false b))
         | F.Forall (_, f'), _
         | F.Exists (_, f'), _
-        | F.ForallTy f', _ -> num pos f'
+        | F.ForallTy f', _
+        | F.ExistsTy f', _ -> num pos f'
       in
       (* memoize *)
       LogtkUtil.debug ~section 5 "estimated %a clauses (sign %B) for %a" E.pp n pos F.pp f;
@@ -468,6 +481,8 @@ let introduce_defs ~ctx ~cache f =
         F.Base.__mk_exists ~varty (maybe_rename ~polarity a b f')
     | F.ForallTy f' ->
         F.Base.__mk_forall_ty (maybe_rename ~polarity a b f')
+    | F.ExistsTy f' ->
+        F.Base.__mk_exists_ty (maybe_rename ~polarity a b f')
   (* product of all (p ~pos x) for x in l if idx(x) != except *)
   and prod_p ~pos l i ~except = match l with
     | [] -> E.Exactly 1
@@ -506,7 +521,8 @@ let rec to_cnf_rec f = match F.view f with
       l
   | F.Forall _
   | F.Exists _
-  | F.ForallTy _ -> failwith "Cnf.to_cnf_rec: can only clausify a skolemized formula"
+  | F.ForallTy _
+  | F.ExistsTy _ -> failwith "Cnf.to_cnf_rec: can only clausify a skolemized formula"
   | F.Xor _
   | F.Imply _
   | F.Equiv _ -> failwith "Cnf.to_cnf_rec: can only clausify a NNF formula"
@@ -611,7 +627,8 @@ let cnf_of_list ?(opts=[]) ?(ctx=LogtkSkolem.create LogtkSignature.empty) l =
         | F.And _
         | F.Forall _
         | F.Exists _
-        | F.ForallTy _ -> assert false
+        | F.ForallTy _
+        | F.ExistsTy _ -> assert false
       else begin
         let f = F.simplify f in
         LogtkUtil.debug ~section 4 "... simplified: %a" F.pp f;
