@@ -377,6 +377,7 @@ let introduce_defs ~ctx ~cache f =
     | `Both -> `Both
   (* rename formula *)
   and _rename ~polarity f =
+    LogtkUtil.debug ~section 4 "def for %a..." F.pp f;
     let p = LogtkSkolem.get_definition ~ctx ~polarity f in
     LogtkUtil.debug ~section 4 "introduce def. %a for subformula %a" F.pp p F.pp f;
     p

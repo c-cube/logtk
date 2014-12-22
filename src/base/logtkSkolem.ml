@@ -82,8 +82,8 @@ let fresh_sym_with ~ctx ~ty prefix =
   ctx.sc_gensym <- n+1;
   let s = LogtkSymbol.of_string (prefix ^ string_of_int n) in
   (* declare type of the new symbol *)
-  ctx.sc_signature <- LogtkSignature.declare ctx.sc_signature s ty;
   LogtkUtil.debug ~section 3 "new skolem symbol %a with type %a" LogtkSymbol.pp s LogtkType.pp ty;
+  ctx.sc_signature <- LogtkSignature.declare ctx.sc_signature s ty;
   s
 
 let fresh_sym ~ctx ~ty = fresh_sym_with ~ctx ~ty ctx.sc_prefix
@@ -190,7 +190,10 @@ let get_definition ~ctx ~polarity f =
     let all_vars = vars @ bvars in
     let ty_of_vars = List.map T.ty all_vars in
     (* build the proxy literal *)
-    let ty = LogtkType.(forall ty_bvars (ty_prop <== ty_of_vars)) in
+    let ty = List.fold_left
+      (fun f _ -> LogtkType.__forall f)
+      LogtkType.(ty_prop <== ty_of_vars) ty_bvars
+    in
     let const = T.const ~ty (fresh_sym_with ~ctx ~ty ctx.sc_prop_prefix) in
     let p = F.Base.atom (T.app_full const ty_bvars all_vars) in
     (* introduce new name for [f] *)
@@ -203,12 +206,14 @@ let get_definition ~ctx ~polarity f =
         | T.BVar i ->
             let v = T.var ~ty:(T.ty db) (fresh_var ~ctx) in
             i, (v : T.t :> ST.t)
-        | _ -> assert false) bvars
+        | _ -> assert false
+        ) bvars
       and l2 = List.map (fun db -> match LogtkType.view db with
         | LogtkType.BVar i ->
             let v = LogtkType.var (fresh_var ~ctx) in
             i, (v : LogtkType.t :> ST.t)
-        | _ -> assert false) ty_bvars
+        | _ -> assert false
+        ) ty_bvars
       in
       LogtkDBEnv.of_list (l1 @ l2)
     in
