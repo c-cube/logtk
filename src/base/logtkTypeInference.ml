@@ -628,6 +628,7 @@ module FO = struct
         then Ctx.__error ctx "expected type variables";
       let f' = infer_form_rec ctx f' in
       fun ctx ->
+        let vars' = List.map (Ctx.apply_ty ctx) vars' in
         F.Base.forall_ty vars' (f' ctx)
     | PT.Syntactic (Sym.Conn ((Sym.Eq | Sym.Neq) as conn),
       ([_;a;b] | [_; {PT.term=PT.List [a;b]}] | [a;b])) ->
