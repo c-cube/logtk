@@ -202,11 +202,11 @@ let append s1 s2 = match s1, s2 with
   | E, _ -> s2
   | _, E -> s1
   | M m1, M m2 ->
-    let m = M.merge
-      (fun (v,s_v) choice -> match choice with
-        | `Right b2 -> Some b2
-        | `Left b1 -> Some b1
-        | `Both ((t1, s1), (t2, s2)) ->
+    let m = M.merge m1 m2
+      ~f:(fun (v,s_v) pair -> match pair with
+        | `Left x
+        | `Right x -> Some x
+        | `Both ((t1,s1), (t2,s2)) ->
           if T.eq t1 t2 && s1 = s2
             then Some (t1, s1)
             else
@@ -214,8 +214,7 @@ let append s1 s2 = match s1, s2 with
                 "Subst.bind: inconsistent binding for %a[%d]: %a[%d] and %a[%d]"
                   T.pp v s_v T.pp t1 s1 T.pp t2 s2
               in
-              raise (Invalid_argument msg))
-      m1 m2
+              invalid_arg msg)
     in
     M m
 
