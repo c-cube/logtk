@@ -4,7 +4,8 @@ maintainer: "simon.cruanes@inria.fr"
 build: [
     ["ocaml" "setup.ml" "-configure" "--%{menhir:enable}%-meta"
         "--%{qcheck:enable}%-qcheck" "--disable-docs"
-        "--%{menhir:enable}%-parsers" "--%{msat:enable}%-solving"
+        "--%{menhir:enable}%-parsers"
+        "--disable-solving"
         "--disable-tests" "--disable-tools" "--enable-meta"]
     [make "all"]
 ]
