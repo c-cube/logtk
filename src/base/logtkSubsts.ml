@@ -203,10 +203,10 @@ let append s1 s2 = match s1, s2 with
   | _, E -> s1
   | M m1, M m2 ->
     let m = M.merge
-      (fun (v,s_v) b1 b2 -> match b1, b2 with
-        | None, _ -> b2
-        | _, None -> b1
-        | Some (t1, s1), Some (t2, s2) ->
+      (fun (v,s_v) choice -> match choice with
+        | `Right b2 -> Some b2
+        | `Left b1 -> Some b1
+        | `Both ((t1, s1), (t2, s2)) ->
           if T.eq t1 t2 && s1 = s2
             then Some (t1, s1)
             else
