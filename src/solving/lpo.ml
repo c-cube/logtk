@@ -28,6 +28,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 open Logtk
 
+module SI = Msat.Solver_intf
+
 let section = Util.Section.make ~parent:Util.Section.logtk "solving"
 
 (** {6 Constraints} *)
@@ -152,9 +154,23 @@ module C = Constraint
 (** Functor to use Sat, and encode/decode the solution.
   Use "Solving Partial Order Constraints for LPO Termination", Codish & al *)
 module MakeSolver(X : sig end) = struct
-  module Solver = Msat.Sat.Make(struct
-    let debug l fmt = Util.debug ~section (l+3) fmt
-  end)
+  module Lit = struct
+    type t = int
+    let fresh = let n = ref 0 in fun () -> incr n; !n
+    let sign x = x>0
+    let abs = abs
+    let print = Format.pp_print_int
+    let dummy = 0
+    let neg i = -i
+    let hash i = i land max_int
+    let equal i j = i=j
+    let norm i =
+      if i>0 then i, Msat.Formula_intf.Same_sign
+      else -i, Msat.Formula_intf.Negated
+    type proof = ()
+  end
+
+  module Solver = Msat.Solver.Make(Lit)(Msat.Solver.DummyTheory(Lit))(struct end)
 
   (* propositional atoms map symbols to the binary digits of
      their index in the precedence *)
@@ -184,8 +200,7 @@ module MakeSolver(X : sig end) = struct
     try
       AtomTbl.find atom_to_int_ a
     with Not_found ->
-      let i = Solver.make !num_ in
-      incr num_;
+      let i = Lit.fresh () in
       AtomTbl.add atom_to_int_ a i;
       Hashtbl.add int_to_atom_ i a;
       i
@@ -193,7 +208,7 @@ module MakeSolver(X : sig end) = struct
   (* get the propositional variable that represents the n-th bit of [s] *)
   let digit s n = atom_to_lit (Atom.make s n)
 
-  module F = Msat.Sat.Tseitin
+  module F = Msat.Tseitin.Make(Lit)
 
   (* encode [a < b]_n where [n] is the number of digits.
       either the n-th digit of [a] is false and the one of [b] is true,
@@ -233,21 +248,21 @@ module MakeSolver(X : sig end) = struct
     | C.False -> F.f_false
 
   (* function to extract symbol -> int from a solution *)
-  let int_of_symbol ~n s =
+  let int_of_symbol sat ~n s =
     let r = ref 0 in
     for i = n downto 1 do
       let lit = digit s i in
-      let is_true = Solver.eval lit in
+      let is_true = sat.SI.eval lit in
       if is_true
-        then r := 2 * !r + 1
-        else r := 2 * !r
+      then r := 2 * !r + 1
+      else r := 2 * !r
     done;
     Util.debug 3 "index of symbol %a in precedence is %d" Symbol.pp s !r;
     !r
 
   (* extract a solution *)
-  let get_solution ~n symbols =
-    let syms = List.rev_map (fun s -> int_of_symbol ~n s, s) symbols in
+  let get_solution sat ~n symbols =
+    let syms = List.rev_map (fun s -> int_of_symbol sat ~n s, s) symbols in
     (* sort in increasing order *)
     let syms = List.sort (fun (n1,_)(n2,_) -> n1-n2) syms in
     (* build solution by imposing f>g iff n(f) > n(g) *)
@@ -268,9 +283,9 @@ module MakeSolver(X : sig end) = struct
     sol
 
   let print_lit fmt i =
-    if not (Solver.sign i) then Format.fprintf fmt "¬";
+    if not (Lit.sign i) then Format.fprintf fmt "¬";
     try
-      let a = Hashtbl.find int_to_atom_ (Solver.abs i) in
+      let a = Hashtbl.find int_to_atom_ (Lit.abs i) in
       Atom.print fmt a
     with Not_found ->
       Format.fprintf fmt "L%d" (abs (i : Solver.atom :> int))  (* tseitin *)
@@ -310,14 +325,14 @@ module MakeSolver(X : sig end) = struct
     let rec next () =
       Util.debug 5 "check satisfiability";
       match Solver.solve () with
-      | Solver.Sat ->
+      | Solver.Sat sat ->
         Util.debug 5 "next solution exists, try to extract it...";
-        let solution = get_solution ~n symbols in
+        let solution = get_solution sat ~n symbols in
         Util.debug 5 "... solution is %a" Solution.pp solution;
         (* obtain another solution: negate current one and continue *)
         let tl = lazy (negate ~n solution) in
         LazyList.Cons (solution, tl)
-      | Solver.Unsat ->
+      | Solver.Unsat _ ->
         Util.debug 5 "no solution";
         LazyList.Nil
     and negate ~n solution =
@@ -325,8 +340,8 @@ module MakeSolver(X : sig end) = struct
       let c = Solution.neg_to_constraint solution in
       encode_constr c;
       match Solver.solve () with
-      | Solver.Sat -> next()
-      | Solver.Unsat -> LazyList.Nil
+      | Solver.Sat _ -> next()
+      | Solver.Unsat _ -> LazyList.Nil
     in
     lazy (next())
 end
