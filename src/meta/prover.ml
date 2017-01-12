@@ -117,7 +117,7 @@ let __clause_of_ast ~ctx ast =
 let of_ho_ast p decls =
   try
     let ctx = TypeInference.Ctx.create (signature p) in
-    let clauses = Sequence.fmap (__clause_of_ast ~ctx) decls in
+    let clauses = Sequence.filter_map (__clause_of_ast ~ctx) decls in
     (* add clauses to the prover *)
     let p', consequences = Seq.of_seq p clauses in
     (* enrich signature *)

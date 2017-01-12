@@ -121,8 +121,8 @@ module Map = T.Map
 module Tbl = T.Tbl
 
 module Seq = struct
-  let vars ty = Sequence.fmap of_term (T.Seq.vars ty)
-  let sub ty = Sequence.fmap of_term (T.Seq.subterms ty)
+  let vars ty = Sequence.filter_map of_term (T.Seq.vars ty)
+  let sub ty = Sequence.filter_map of_term (T.Seq.subterms ty)
   let add_set = T.Seq.add_set
   let max_var = T.Seq.max_var
 end

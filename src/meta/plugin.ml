@@ -263,11 +263,11 @@ end
 (** {2 Interaction with Reasoner} *)
 
 let facts r plugin =
-  Reasoner.Seq.facts r |> Sequence.fmap plugin#of_fact
+  Reasoner.Seq.facts r |> Sequence.filter_map plugin#of_fact
 
 let of_consequence (fact,_) plugin = plugin#of_fact fact
 
 let of_consequences seq plugin =
-  Sequence.fmap
+  Sequence.filter_map
     (fun c -> of_consequence c plugin)
     seq

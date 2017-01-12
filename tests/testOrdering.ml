@@ -56,7 +56,7 @@ let check_ordering_inv_by_subst ord =
   (* generate pairs of terms, and grounding substitutions *)
   let gen = Arbitrary.((pair ArTerm.default ArTerm.default) >>= fun (t1, t2) ->
     let vars = Sequence.of_list [t1; t2]
-      |> Sequence.flatMap T.Seq.vars
+      |> Sequence.flat_map T.Seq.vars
       |> T.Seq.add_set T.Set.empty
     in
     (* grounding substitution *)

@@ -101,8 +101,8 @@ module Make(C : LogtkIndex.CLAUSE) = struct
     (* sequence of symbols of clause, of given sign *)
     let _symbols ~sign lits =
       _select_sign ~sign lits
-        |> Sequence.flatMap _terms_of_lit
-        |> Sequence.flatMap T.Seq.symbols
+        |> Sequence.flat_map _terms_of_lit
+        |> Sequence.flat_map T.Seq.symbols
 
     let count_symb_plus symb =
       { name = LogtkUtil.sprintf "count+(%a)" LogtkSymbol.pp symb;
@@ -117,7 +117,7 @@ module Make(C : LogtkIndex.CLAUSE) = struct
     (* max depth of the symbol in the term, or -1 *)
     let max_depth_term symb t =
       let symbs_depths = T.Seq.subterms_depth t
-        |> Sequence.fmap
+        |> Sequence.filter_map
           (fun (t,depth) -> match T.Classic.view t with
             | T.Classic.App (s, _, _) when LogtkSymbol.eq s symb -> Some depth
             | _ -> None)

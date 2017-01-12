@@ -238,7 +238,7 @@ module Untyped = struct
     | _ -> false
 
   let formulas ?(negate=__is_conjecture) decls =
-    Sequence.fmap
+    Sequence.filter_map
       (function
         | AU.TypeDecl _
         | AU.NewType _
@@ -257,7 +257,7 @@ module Untyped = struct
       decls
 
   let sourced_formulas ?(negate=__is_conjecture) ?(file="unknown_file") decls =
-    Sequence.fmap
+    Sequence.filter_map
       (function
         | AU.TypeDecl _
         | AU.NewType _
@@ -348,7 +348,7 @@ module Typed = struct
     | _ -> false
 
   let formulas ?(negate=__is_conjecture) decls =
-    Sequence.fmap
+    Sequence.filter_map
       (function
         | AT.TypeDecl _
         | AT.NewType _
@@ -367,7 +367,7 @@ module Typed = struct
       decls
 
   let sourced_formulas ?(negate=__is_conjecture) ?(file="unknown_file") decls =
-    Sequence.fmap
+    Sequence.filter_map
       (function
         | AT.TypeDecl _
         | AT.NewType _
@@ -518,7 +518,7 @@ let annotate_types init untyped =
 let to_cnf ?opts signature decls =
   (* formulas with correct negation sign *)
   let ctx = Skolem.create signature in
-  let clauses = Sequence.flatMap
+  let clauses = Sequence.flat_map
     (fun decl -> match decl with
       | AT.TFF(n,r,f,info)
       | AT.FOF(n,r,f,info) ->

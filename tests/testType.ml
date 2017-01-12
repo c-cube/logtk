@@ -43,7 +43,7 @@ let check_infer_all_symbs =
     let signature = TypeInference.Ctx.to_signature ctx in
     let symbols = terms
       |> Sequence.of_list
-      |> Sequence.flatMap PT.Seq.symbols 
+      |> Sequence.flat_map PT.Seq.symbols 
       |> Symbol.Seq.add_set Symbol.Set.empty in
     Symbol.Set.for_all (Signature.mem signature) symbols
   in

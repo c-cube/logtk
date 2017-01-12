@@ -196,7 +196,7 @@ val map : vertices:('v -> 'v2) -> edges:('e -> 'e2) ->
           ('id, 'v, 'e) t -> ('id, 'v2, 'e2) t
   (** Map vertice and edge labels *)
 
-val flatMap : ('id -> 'id Sequence.t) ->
+val flat_map : ('id -> 'id Sequence.t) ->
               ('id, 'v, 'e) t ->
               ('id, 'v, 'e) t
   (** Replace each vertex by some vertices. By mapping [v'] to [f v'=v1,...,vn],

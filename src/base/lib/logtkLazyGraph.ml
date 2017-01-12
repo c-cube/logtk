@@ -262,14 +262,14 @@ module Full = struct
 end
 
 let bfs graph v =
-  Sequence.fmap
+  Sequence.filter_map
     (function
       | Full.EnterVertex (v, l, i, _) -> Some (v, l, i)
       | _ -> None)
     (Full.bfs_full graph (Sequence.singleton v))
 
 let dfs graph v =
-  Sequence.fmap
+  Sequence.filter_map
     (function
       | Full.EnterVertex (v, l, i, _) -> Some (v, l, i)
       | _ -> None)
@@ -492,12 +492,12 @@ let map ~vertices ~edges g =
 
 (** Replace each vertex by some vertices. By mapping [v'] to [f v'=v1,...,vn],
     whenever [v] ---e---> [v'], then [v --e--> vi] for i=1,...,n. *)
-let flatMap f g =
+let flat_map f g =
   let force v =
     match g.force v with
     | Empty -> Empty
     | Node (_, l, edges_enum) ->
-      let edges_enum' = Sequence.flatMap
+      let edges_enum' = Sequence.flat_map
         (fun (e, v') ->
           Sequence.map (fun v'' -> e, v'') (f v'))
         edges_enum in

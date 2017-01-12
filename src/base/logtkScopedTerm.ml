@@ -552,7 +552,7 @@ module DB = struct
   let open_vars t =
     _to_seq ~depth:0 t
       |> Sequence.zip
-      |> Sequence.fmap
+      |> Sequence.filter_map
         (fun (t,depth) -> match view t with
           | BVar i when i>=depth ->
               let ty = unshift depth (ty_exn t) in

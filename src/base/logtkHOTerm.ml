@@ -252,7 +252,7 @@ module Seq = struct
   let max_var = T.Seq.max_var
   let min_var = T.Seq.min_var
   let ty_vars t =
-    subterms t |> Sequence.flatMap (fun t -> LogtkType.Seq.vars (ty t))
+    subterms t |> Sequence.flat_map (fun t -> LogtkType.Seq.vars (ty t))
   let add_set set ts =
     Sequence.fold (fun set t -> Set.add t set) set ts
 end
@@ -291,7 +291,7 @@ let min_var set = Set.to_seq set |> Seq.min_var
 
 let add_vars tbl t = Seq.vars t (fun x -> Tbl.replace tbl x ())
 
-let vars ts = Sequence.flatMap Seq.vars ts |> Seq.add_set Set.empty
+let vars ts = Sequence.flat_map Seq.vars ts |> Seq.add_set Set.empty
 
 let vars_prefix_order t =
   Seq.vars t

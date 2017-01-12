@@ -132,7 +132,7 @@ module Make(P : LogtkPrecedence.S with type symbol = LogtkSymbol.t) = struct
         then
           { offset = 0; pos_counter = 0; neg_counter = 0; balance = Obj.magic None }
         else begin
-          let vars = Sequence.of_list [t1; t2] |> Sequence.flatMap T.Seq.vars in
+          let vars = Sequence.of_list [t1; t2] |> Sequence.flat_map T.Seq.vars in
           let minvar = T.Seq.min_var vars in
           let maxvar = T.Seq.max_var vars in
           assert (minvar <= maxvar);

@@ -143,11 +143,11 @@ let detect_theories prover clauses =
   let _, consequences = Prover.Seq.of_seq prover facts in
   let consequence_terms = Sequence.map fst consequences in
   (* filter theories, axioms, lemmas... *)
-  let theories = Sequence.fmap Plugin.theory#of_fact consequence_terms
-  and lemmas = Sequence.fmap Plugin.lemma#of_fact consequence_terms
-  and axioms = Sequence.fmap Plugin.axiom#of_fact consequence_terms
-  and rewrite = Sequence.fmap Plugin.rewrite#of_fact consequence_terms
-  and pre_rewrite = Sequence.fmap Plugin.pre_rewrite#of_fact consequence_terms
+  let theories = Sequence.filter_map Plugin.theory#of_fact consequence_terms
+  and lemmas = Sequence.filter_map Plugin.lemma#of_fact consequence_terms
+  and axioms = Sequence.filter_map Plugin.axiom#of_fact consequence_terms
+  and rewrite = Sequence.filter_map Plugin.rewrite#of_fact consequence_terms
+  and pre_rewrite = Sequence.filter_map Plugin.pre_rewrite#of_fact consequence_terms
   in
   { theories; lemmas; axioms; rewrite; pre_rewrite; }
 

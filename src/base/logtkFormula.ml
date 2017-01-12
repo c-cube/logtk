@@ -582,7 +582,7 @@ module Make(MyT : TERM) = struct
     let terms f k = iter k f
 
     let vars f =
-      Sequence.flatMap MyT.Seq.vars (terms f)
+      Sequence.flat_map MyT.Seq.vars (terms f)
 
     let atoms f k =
       fold_atom
@@ -622,10 +622,10 @@ module Make(MyT : TERM) = struct
   let de_bruijn_set f =
     let seq = T.DB.open_vars (f : t :> T.t) in
     let tvars = seq
-      |> Sequence.fmap MyT.of_term
+      |> Sequence.filter_map MyT.of_term
       |> Sequence.fold (fun acc t -> MyT.Set.add t acc) MyT.Set.empty
     and tyvars = seq
-      |> Sequence.fmap LogtkType.of_term
+      |> Sequence.filter_map LogtkType.of_term
       |> Sequence.fold (fun acc t -> LogtkType.Set.add t acc) LogtkType.Set.empty
     in tyvars, tvars
 

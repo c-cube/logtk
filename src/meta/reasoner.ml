@@ -52,7 +52,7 @@ module Clause = struct
   type clause = t
 
   let safe head body =
-    let vars_body = Sequence.flatMap HOT.Seq.vars (Sequence.of_list body) in
+    let vars_body = Sequence.flat_map HOT.Seq.vars (Sequence.of_list body) in
     HOT.Seq.vars head
       |> Sequence.for_all (fun v -> Sequence.exists (HOT.eq v) vars_body)
 
@@ -83,7 +83,7 @@ module Clause = struct
   module Seq = struct
     let terms c k =
       k c.head; List.iter k c.body
-    let vars c = terms c |> Sequence.flatMap HOT.Seq.vars
+    let vars c = terms c |> Sequence.flat_map HOT.Seq.vars
   end
 
   let hash_fun c h = CCHash.seq HOT.hash_fun (Seq.terms c) h
@@ -311,7 +311,7 @@ module Seq = struct
 
   let facts db =
     to_seq db
-    |> Sequence.fmap
+    |> Sequence.filter_map
         (fun c ->
           match c.Clause.body with
           | [] -> Some c.Clause.head

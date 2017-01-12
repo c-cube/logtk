@@ -290,11 +290,11 @@ module Seq = struct
     Sequence.fold (fun set x -> Set.add x set) set xs
 
   let ty_vars t =
-    subterms t |> Sequence.flatMap (fun t -> LogtkType.Seq.vars (ty t))
+    subterms t |> Sequence.flat_map (fun t -> LogtkType.Seq.vars (ty t))
 
   let typed_symbols t =
     subterms t
-      |> Sequence.fmap
+      |> Sequence.filter_map
         (fun t -> match T.view t with
           | T.Const s -> Some (s, ty t)
           | _ -> None)
@@ -331,7 +331,7 @@ let min_var set = Set.to_seq set |> Seq.min_var
 
 let add_vars tbl t = Seq.vars t (fun x -> Tbl.replace tbl x ())
 
-let vars ts = Sequence.flatMap Seq.vars ts |> Seq.add_set Set.empty
+let vars ts = Sequence.flat_map Seq.vars ts |> Seq.add_set Set.empty
 
 let vars_prefix_order t =
   Seq.vars t
@@ -475,7 +475,7 @@ module AC(A : AC_SPEC) = struct
     eq t1' t2'
 
   let symbols seq =
-    Sequence.flatMap Seq.symbols seq
+    Sequence.flat_map Seq.symbols seq
       |> Sequence.filter A.is_ac
       |> LogtkSymbol.Seq.add_set LogtkSymbol.Set.empty
 end

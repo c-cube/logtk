@@ -166,7 +166,7 @@ let (@|=) l f = match l with
   | x::_ -> Some (f x)
 
 let detect seq =
-  let seq = Sequence.fmap
+  let seq = Sequence.filter_map
     (fun form ->
       _lazy_mappend
         [ lazy (is_definition form >|= LogtkTransform.of_term_rule)
@@ -191,7 +191,7 @@ let detect_def ?(only:[`Pred|`Term] option) ?(arity:[`Zero|`Nonzero] option) for
   | Some `Nonzero -> false, true
   | None -> true, true
   in
-  let seq = Sequence.fmap
+  let seq = Sequence.filter_map
     (fun form ->
       _lazy_mappend
       [ lazy

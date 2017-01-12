@@ -200,13 +200,13 @@ module Seq = struct
 
   let free_vars t =
     subterms_with_bound t
-      |> Sequence.fmap (fun (v,bound) ->
+      |> Sequence.filter_map (fun (v,bound) ->
           if is_var v && not (Set.mem v bound)
           then Some v
           else None)
 
   let symbols t = subterms t
-      |> Sequence.fmap (function
+      |> Sequence.filter_map (function
         | {term=Const s} -> Some s
         | {term=Bind (s, _, _)} -> Some s
         | _ -> None)

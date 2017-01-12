@@ -287,7 +287,7 @@ module MakeSolver(X : sig end) = struct
     (* count the number of symbols *)
     let symbols =
       Sequence.of_list l
-        |> Sequence.flatMap C.Seq.exprs
+        |> Sequence.flat_map C.Seq.exprs
         |> Symbol.Seq.add_set Symbol.Set.empty
         |> Symbol.Set.elements
     in
