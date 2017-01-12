@@ -2,11 +2,16 @@ opam-version: "1.2"
 author: "Simon Cruanes"
 maintainer: "simon.cruanes@inria.fr"
 build: [
-    ["ocaml" "setup.ml" "-configure" "--%{menhir:enable}%-meta"
-        "--%{qcheck:enable}%-qcheck" "--disable-docs"
+    ["ocaml" "setup.ml" "-configure"
+        "--%{menhir:enable}%-meta"
+        # "--%{qcheck:enable}%-qcheck"
+        "--disable-qcheck"
+        "--disable-docs"
         "--%{menhir:enable}%-parsers"
         "--disable-solving"
-        "--disable-tests" "--disable-tools" "--enable-meta"]
+        "--disable-tests"
+        "--disable-tools"
+        "--enable-meta"]
     [make "all"]
 ]
 install: [
