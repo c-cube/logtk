@@ -157,7 +157,7 @@ Executable run_bench
   Install:          false
   CompiledObject:   native
   MainIs:           run_bench.ml
-  Build$:           flag(bench) && flag(tests)
+  Build$:           flag(bench) && flag(tests) && flag(qcheck)
   BuildDepends:     logtk,benchmark,qcheck,logtk.arbitrary
 
 Test all
