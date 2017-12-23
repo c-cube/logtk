@@ -1,5 +1,8 @@
 # LogTK
 
+**NOTE**: newer versions of Logtk now belong in the repository https://github.com/c-cube/zipperposition (and will be packaged on [opam](http://opam.ocaml.org/) from there on).
+
+
 Logic toolkit, designed primarily for first-order automated reasoning. It aims
 at providing basic types and algorithms (terms, unification, orderings,
 indexing, etc.) that can be factored out of several applications.
